@@ -78,23 +78,23 @@ function user_already_exists() {
             $fullMessage = "Username and email are available.";
             $msgType = "success";
             setMessage($msgType, $fullMessage);
-            return true;
+            return false;
         case 1:
             $fullMessage = "$usernameMessage $andText $emailMessage $description";
             $msgType = "error";
             setMessage($msgType, $fullMessage);
-            return false;
+            return true;
         case 2:
             $andText = "and";
             $fullMessage = "$usernameMessage $andText $emailMessage $description";
             $msgType = "error";
             setMessage($msgType, $fullMessage);
-            return false;
+            return true;
     }
 }
 
 function storeValuesInDB() {
-    global $conn, $username, $email, $password, $messageType, $message;
+    global $conn, $username, $email, $password;
 
     $sql = "INSERT INTO users (username, email, password) VALUES ('$username', '$email', '$password')";
     
