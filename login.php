@@ -20,7 +20,10 @@ $username_email = "";
 $password = "";
 $message = "";
 $messageType = "";
-$user_id = null; //important
+
+//Output Variables
+$user_id = null; 
+$username = null; //need to be obtained, to be stored to AuthContext
 
 function setMessage($msgType, $msg){
     global $messageType, $message;
@@ -31,6 +34,11 @@ function setMessage($msgType, $msg){
 function setUserId($extractedUserId) {
     global $user_id;
     $user_id = $extractedUserId;
+}
+
+function setUsername($extractedUsername) {
+    global $username;
+    $username = $extractedUsername;
 }
 
 function storePasswordFromDb($result){
@@ -107,12 +115,31 @@ function inputted_correct_pasword(){
     return false;
 }
 
+//Sure way to get the username from the user id
+//username is what usually is displayed to the account details
+function extract_username(){
+    global $conn, $user_id;
+
+    $sql = "SELECT * FROM users WHERE user_id='$user_id'";
+    $result = $conn->query($sql);
+    
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $username = $row['username'];
+        setUsername($username); 
+        setMessage("success", "Username of user id " . $user_id . " is " . $username . ".");
+        return true;
+    } 
+    setMessage("error", "User not found.");
+    return false;
+}
 //Function calls 
 function main_function(){
     check_if_data_is_received(); //get the data and check if recieved
     check_input_type(); //check whether username or email (only for debugging purposes)
     if(!get_user_id_if_user_exists()) return; //if user doesn't exist, exit
     if(!inputted_correct_pasword()) return; //if password is incorrect, exit
+    extract_username(); //after passing all checks, get the username
 }
 
 main_function();
@@ -120,7 +147,8 @@ main_function();
 echo json_encode([
     "message" => $message,
     "messageType" => $messageType,
-    "userId" => $user_id
+    "userId" => $user_id,
+    "username" => $username
 ]);
 exit(0);
 ?>
