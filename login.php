@@ -1,4 +1,6 @@
 <?php
+include('db.php'); 
+
 //Access provider headers stuff para no errors
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
@@ -18,11 +20,25 @@ $username_email = "";
 $password = "";
 $message = "";
 $messageType = "";
+$user_id = null; //important
 
 function setMessage($msgType, $msg){
     global $messageType, $message;
     $messageType = $msgType;
     $message = $msg;
+}
+
+function setUserId($extractedUserId) {
+    global $user_id;
+    $user_id = $extractedUserId;
+}
+
+function storePasswordFromDb($result){
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        return $row["password"];
+    } 
+    return null;
 }
 
 function check_if_data_is_received() {
@@ -37,76 +53,74 @@ function check_if_data_is_received() {
     setMessage("success", "Username/email is $username_email, and password is $password.");
 }
 
-function input_type_if_email_or_username() {
-    global $username_email, $username, $email;
+function check_input_type() {
+    global $username_email;
     if (strpos($username_email, '@') !== false) {
         setMessage("black", "Input is an email.");
+        return "email";
     }
     setMessage("black", "Input is a username.");
+    return "username";
 }
 
-/*
-function user_exists() {
+function get_user_id_if_user_exists() {
     global $conn, $username_email;
 
-    $numOfInvalidFields = 0;
-    $usernameMessage = "";
-    $emailMessage = "";
-    $andText = "";
-    $msgType = "";
-    $description = "";
-    $fullMessage = "$usernameMessage $andText $emailMessage $description";
-
     //Check if the username/email exists
-    $sql = "SELECT * FROM users WHERE username='$username'";
+    $sql = "SELECT * FROM users WHERE username='$username_email' OR email='$username_email'";
     $result = $conn->query($sql);
     
+    //If users exists
     if ($result->num_rows > 0) {
-        $usernameMessage = "Username";
-        $description = "already exists.";
-        $numOfInvalidFields++;
-    } 
-    //Check if the email is already taken
-    $sql = "SELECT * FROM users WHERE email='$email'";
-    $result = $conn->query($sql);
-    
-    if ($result->num_rows > 0) {
-        $emailMessage = "Email";
-        $description = "already exists.";
-        $numOfInvalidFields++;
-    } 
+        //get the user id
+        $row = $result->fetch_assoc();
+        $user_id = $row['user_id'];
+        setUserId($user_id); 
 
-    switch ($numOfInvalidFields) {
-        case 0:
-            $fullMessage = "Username and email are available.";
-            $msgType = "success";
-            setMessage($msgType, $fullMessage);
-            return false;
-        case 1:
-            $fullMessage = "$usernameMessage $andText $emailMessage $description";
-            $msgType = "error";
-            setMessage($msgType, $fullMessage);
-            return true;
-        case 2:
-            $andText = "and";
-            $fullMessage = "$usernameMessage $andText $emailMessage $description";
-            $msgType = "error";
-            setMessage($msgType, $fullMessage);
-            return true;
-    }
+        setMessage("success", "User exists. User ID is " . $user_id . ".");
+        return true;
+    } 
+    setMessage("error", "User does not exist.");
+    return false;
 }
-*/
+
+function inputted_correct_pasword(){
+    global $conn, $user_id, $password;
+
+    //Get password of the user id
+    $sql = "SELECT * FROM users WHERE user_id='$user_id'";
+    $result = $conn->query($sql);
+    $extracted_password = storePasswordFromDb($result);
+    
+    // Debug check
+    if ($extracted_password === null) {
+        setMessage("error", "User found, but password not retrieved.");
+        return false;
+    }
+
+    //Check if the password is correct
+    if ($extracted_password === $password) {
+        setMessage("success", "Password is correct.");
+        return true;
+    }
+    setMessage("error", "Password is incorrect. Password is " . $extracted_password . ".");
+    return false;
+}
 
 //Function calls 
+function main_function(){
+    check_if_data_is_received(); //get the data and check if recieved
+    check_input_type(); //check whether username or email (only for debugging purposes)
+    if(!get_user_id_if_user_exists()) return; //if user doesn't exist, exit
+    if(!inputted_correct_pasword()) return; //if password is incorrect, exit
+}
 
-check_if_data_is_received();
-input_type_if_email_or_username();
+main_function();
 //Output the messages (final)
-/*
 echo json_encode([
     "message" => $message,
-    "messageType" => $messageType
+    "messageType" => $messageType,
+    "userId" => $user_id
 ]);
 exit(0);
-*/
 ?>
