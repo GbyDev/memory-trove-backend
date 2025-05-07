@@ -148,7 +148,8 @@ echo json_encode([
     "message" => $message,
     "messageType" => $messageType,
     "userId" => $user_id,
-    "username" => $username
+    "username" => $username,
+    "password" => $password
 ]);
 exit(0);
 ?>
