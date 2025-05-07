@@ -1,0 +1,12 @@
+How to set up - backend edition
+
+PREQUISITES - INSTALL XAMPP
+
+1. open XAMPP
+
+2. start Apache and MySQL ports (I ON BOSS)
+
+3. get the cloned repository and place it to XAMPP/htdocs (htdocs of XAMPP)
+
+OPTIMIZED SET UP, WORKSPACE
+- if you want to put all these separated folders in the same workspace in vscode
