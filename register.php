@@ -1,7 +1,7 @@
 <?php
 include('db.php'); 
 
-//Headers
+//Access provider headers stuff para no errors
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
@@ -99,7 +99,7 @@ function storeValuesInDB() {
     $sql = "INSERT INTO users (username, email, password) VALUES ('$username', '$email', '$password')";
     
     if ($conn->query($sql) === TRUE) {
-        setMessage("success", "User registered successfully.");
+        setMessage("success", "User registered successfully. Redirecting to login page...");
     } 
     else {
         setMessage("error", "Error: " . $conn->error);
@@ -107,14 +107,13 @@ function storeValuesInDB() {
 }
 
 
+//Function calls
 check_if_data_is_received();
 if(!user_already_exists()){
     //Must be implemented in the future
     //hashPassword();
     storeValuesInDB();
 }
-    
-
 
 //Output the messages (final)
 echo json_encode([
