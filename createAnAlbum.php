@@ -19,11 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 //Variables
 $data = json_decode(file_get_contents("php://input"), true);
 $user_id = $data["user_id"];
-$album_name = $data["album_name"];
 
-$album_filepath = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name";
-$album_qrcode_filepath = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/qrcode";
-$album_images_filepath = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/images";
+//Sanitize the Album Name
+$album_name = trim(preg_replace('/[^A-Za-z0-9_\- ]/', '', $data["album_name"]));
+$album_name = strtolower($album_name);
+
+$album_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name";
+$album_qrcode_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/qrcode";
+$album_cover_img_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/coverPhoto";
+$album_images_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/images";
 $message = "";
 $messageType = "";
 
@@ -36,9 +40,9 @@ function setMessage($msgType, $msg){
 
 
 function album_already_exists(){
-    global $album_filepath, $album_name;
+    global $album_path, $album_name;
     //Check if folder exists
-    if (file_exists($album_filepath)) {
+    if (file_exists($album_path)) {
         setMessage("error", "Album of the same name already exists.");
         return true;
     }
@@ -47,19 +51,34 @@ function album_already_exists(){
 }
 
 function album_folder_is_created(){
-    global $album_filepath, $album_name;
-    if (mkdir($album_filepath, 0777, true)) {
-        setMessage("success", "Album $album_name has been created at $album_filepath");
+    global $album_path, $album_name;
+    if (mkdir($album_path, 0777, true)) {
+        setMessage("success", "Album $album_name has been created at $album_path");
         return true;
     } 
     setMessage("error", "There are problems creating the folder.");
     return false;
 }
 
+function create_subfolders(){
+    global $album_qrcode_path, $album_images_path, $album_cover_img_path;
+    //If folder doesn't exist, create that folder
+    if (!file_exists($album_qrcode_path)){
+        mkdir($album_qrcode_path, 0777, true);
+    }
+    if (!file_exists($album_images_path)){
+        mkdir($album_images_path, 0777, true);
+    }
+    if (!file_exists($album_cover_img_path)){
+        mkdir($album_cover_img_path, 0777, true);
+    }
+}
+
 
 function main(){
     if (album_already_exists()) return;
     if (!album_folder_is_created()) return;
+    create_subfolders();
 }
 
 
@@ -69,7 +88,10 @@ main();
 echo json_encode([
     "message" => $message,
     "messageType" => $messageType,
-    "album_filepath" => $album_filepath,
+    "album_path" => $album_path,
+    "album_qrcode_path" => $album_qrcode_path,
+    "album_images_path" => $album_images_path,
+    
 ]);
 exit(0);
 ?>
