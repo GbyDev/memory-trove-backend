@@ -29,8 +29,11 @@ $album_qrcode_path = "$album_path" . "/qrcode";
 $album_cover_img_path = "$album_path" . "/cover";
 $album_images_path = "$album_path" . "/images";
 
-// QR Code file path (No need to save QR code locally, we'll use Google Chart API directly)
+// QR Code file path 
 $qr_code_path = "$album_qrcode_path" . "/qrcode.png";
+
+//Album Description
+$album_desc = $data["album_desc"];
 
 $message = "";
 $messageType = "";
@@ -74,23 +77,24 @@ function create_subfolders(){
     setMessage("success", "Subfolders have been created.");
 }
 
+//OH MY GOD YOU'RE LITERALLY THE MOST DIFFICULT PART OF THE CODE
+// F****** HOURS OF TINKERING WITH THIS BS
 function generate_QR_code() {
     global $url, $qr_code_path;
 
     include_once('./phpqrcode/qrlib.php');
 
-    // Ensure target directory exists
     $dir = dirname($qr_code_path);
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }
 
-    // Actually generate the QR code and write to file
     QRcode::png($url, $qr_code_path, QR_ECLEVEL_L, 10);
 
     if (file_exists($qr_code_path)) {
         setMessage("success", "QR code generated successfully.");
-    } else {
+    } 
+    else {
         setMessage("error", "QR code generation failed.");
     }
 }
