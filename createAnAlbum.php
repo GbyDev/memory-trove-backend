@@ -1,5 +1,5 @@
 <?php
-include('db.php'); 
+//include('db.php'); 
 
 //Access provider headers stuff para no errors
 header("Access-Control-Allow-Origin: *");
@@ -14,23 +14,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0); 
 }
 
-
-
-//Variables
+// Variables
 $data = json_decode(file_get_contents("php://input"), true);
 $user_id = $data["user_id"];
+$url = $data["url"];
 
-//Sanitize the Album Name
-$album_name = trim(preg_replace('/[^A-Za-z0-9_\- ]/', '', $data["album_name"]));
+// Sanitize the Album Name
+$album_name = $data["album_name"];
 $album_name = strtolower($album_name);
 
-$album_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name";
-$album_qrcode_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/qrcode";
-$album_cover_img_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/coverPhoto";
-$album_images_path = "C:/xampp/htdocs/memory-trove-backend/albums/$album_name/images";
+$user_folder_path = "C:/xampp/htdocs/memory-trove-backend/albums/$user_id";
+$album_path = "$user_folder_path" . "/$album_name";
+$album_qrcode_path = "$album_path" . "/qrcode";
+$album_cover_img_path = "$album_path" . "/cover";
+$album_images_path = "$album_path" . "/images";
+
+// QR Code file path (No need to save QR code locally, we'll use Google Chart API directly)
+$qr_code_path = "$album_qrcode_path" . "/qrcode.png";
+
 $message = "";
 $messageType = "";
-
 
 function setMessage($msgType, $msg){
     global $messageType, $message;
@@ -38,31 +41,27 @@ function setMessage($msgType, $msg){
     $message = $msg;
 }
 
-
-function album_already_exists(){
-    global $album_path, $album_name;
-    //Check if folder exists
-    if (file_exists($album_path)) {
-        setMessage("error", "Album of the same name already exists.");
-        return true;
+function create_user_folder()  {
+    global $user_folder_path;
+    if (!file_exists($user_folder_path)){
+        mkdir($user_folder_path, 0777, true);
+        setMessage("success", "User folder has been created.");
     }
-    setMessage("success", "Album $album_name has not yet been created.");
-    return false;
 }
 
-function album_folder_is_created(){
+function create_album_folder(){
     global $album_path, $album_name;
-    if (mkdir($album_path, 0777, true)) {
-        setMessage("success", "Album $album_name has been created at $album_path");
-        return true;
-    } 
-    setMessage("error", "There are problems creating the folder.");
-    return false;
+    // Check if folder exists
+    if (file_exists($album_path)) {
+        setMessage("error", "Album of the same name already exists.");
+    }
+    setMessage("success", "Album $album_name has not yet been created.");
+    mkdir($album_path, 0777, true);
 }
 
 function create_subfolders(){
     global $album_qrcode_path, $album_images_path, $album_cover_img_path;
-    //If folder doesn't exist, create that folder
+    // If folder doesn't exist, create that folder
     if (!file_exists($album_qrcode_path)){
         mkdir($album_qrcode_path, 0777, true);
     }
@@ -72,26 +71,48 @@ function create_subfolders(){
     if (!file_exists($album_cover_img_path)){
         mkdir($album_cover_img_path, 0777, true);
     }
+    setMessage("success", "Subfolders have been created.");
 }
 
+function generate_QR_code() {
+    global $url, $qr_code_path;
+
+    include_once('./phpqrcode/qrlib.php');
+
+    // Ensure target directory exists
+    $dir = dirname($qr_code_path);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+
+    // Actually generate the QR code and write to file
+    QRcode::png($url, $qr_code_path, QR_ECLEVEL_L, 10);
+
+    if (file_exists($qr_code_path)) {
+        setMessage("success", "QR code generated successfully.");
+    } else {
+        setMessage("error", "QR code generation failed.");
+    }
+}
 
 function main(){
-    if (album_already_exists()) return;
-    if (!album_folder_is_created()) return;
+    clearstatcache();
+    create_user_folder();
+    create_album_folder();
     create_subfolders();
+    generate_QR_code();
 }
 
-
-
+// Call the main function to execute the operations
 main();
-//Output the messages (final)
+
+// Output the messages (final)
 echo json_encode([
     "message" => $message,
     "messageType" => $messageType,
     "album_path" => $album_path,
     "album_qrcode_path" => $album_qrcode_path,
     "album_images_path" => $album_images_path,
-    
 ]);
 exit(0);
 ?>

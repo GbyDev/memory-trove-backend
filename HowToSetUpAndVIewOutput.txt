@@ -10,3 +10,17 @@ PREQUISITES - INSTALL XAMPP
 
 OPTIMIZED SET UP, WORKSPACE
 - if you want to put all these separated folders in the same workspace in vscode
+
+QRCode setup (library for XAMPP setup)
+1. open XAMPP
+
+2. go to apache > config
+
+3. open the php.ini file
+
+4. look for this in the notepad:
+;extension=gd
+
+5. remove the semicolon, and done
+
+explanation: xampp has some features used by the library blocked by default, which requires you to tinker with the ini file a bit.
