@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 //Variables
 $data = json_decode(file_get_contents("php://input"), true);
-$user_id = $data['userId'] ?? null; 
+$user_id = $data['user_id'] ?? null; 
 $numOfAlbums = 0; 
 $message = "";
 $messageType = "";
