@@ -16,10 +16,9 @@ CREATE TABLE albums (
     user_id INT NOT NULL,
     album_name VARCHAR(255) NOT NULL,
     date_created DATE NOT NULL,
+    welcome_text TEXT,
     description TEXT,
-    album_img_filepath VARCHAR(500),
     album_filepath VARCHAR(500),
-    album_qr_code_path VARCHAR(500),
     album_cover_img_path VARCHAR(500),
     foreign key (user_id) references users(user_id)
 );

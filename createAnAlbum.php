@@ -15,6 +15,7 @@ $user_id = $_POST["user_id"];
 $album_name = trim($_POST["album_name"]);
 $url = $_POST["url"];
 $album_desc = $_POST["album_desc"];
+$welcome_text = $_POST["welcome_text"];
 
 $user_folder_path = "C:/xampp/htdocs/memory-trove-backend/albums/$user_id";
 $album_path = "$user_folder_path/$album_name";
@@ -83,7 +84,19 @@ function upload_cover_photo() {
 
     // No file uploaded at all
     if (!isset($_FILES['cover_photo']) || $_FILES['cover_photo']['error'] === UPLOAD_ERR_NO_FILE) {
-        setMessage("success", "Album created but with no cover image.");
+        // Use the default placeholder image
+        $defaultPlaceholder = './defaults/cover_photo.jpg';
+        $targetFilePath = "$album_cover_img_path/cover_photo.jpg";
+
+        if (!copy($defaultPlaceholder, $targetFilePath)) {
+            setMessage("error", "Album created but failed to copy default cover photo.");
+            exit(json_encode([
+                "message" => "Could not copy default cover photo.",
+                "messageType" => "error"
+            ]));
+        }
+
+        setMessage("success", "Album created with default cover image.");
         return;
     }
 
@@ -115,8 +128,8 @@ function upload_cover_photo() {
 
 function save_album_to_database() {
     global $conn;
-    global $user_id, $album_name, $album_desc;
-    global $album_path, $album_qrcode_path, $album_cover_img_path;
+    global $user_id, $album_name, $welcome_text,$album_desc;
+    global $album_path, $album_cover_img_path;
 
     // Detect cover photo path, or set it to "empty" if not available
     $coverPhotoFiles = glob("$album_cover_img_path/cover_photo.*");
@@ -124,9 +137,8 @@ function save_album_to_database() {
 
     // Prepare the SQL statement
     $stmt = $conn->prepare("INSERT INTO albums (
-        user_id, album_name, date_created, description,
-        album_img_filepath, album_filepath, album_qr_code_path, album_cover_img_path
-    ) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?)");
+        user_id, album_name, date_created, welcome_text, description, album_filepath, album_cover_img_path
+    ) VALUES (?, ?, CURDATE(), ?, ?, ?, ?)");
 
     if (!$stmt) {
         setMessage("error", "Failed to prepare database statement.");
@@ -138,13 +150,12 @@ function save_album_to_database() {
 
     // Bind the parameters for the prepared statement
     // 'i' for integer, 's' for string, 'empty' for empty cover photo
-    $stmt->bind_param("issssss", 
+    $stmt->bind_param("isssss", 
         $user_id,  // user_id (integer)
         $album_name,  // album_name (string)
+        $welcome_text,  // welcome_txt (string)
         $album_desc,  // album_desc (string)
         $album_path,  // album_path (string)
-        $album_qrcode_path,  // album_qr_code_path (string)
-        $album_cover_img_path,  // album_cover_img_path (string)
         $coverPhotoPath  // cover photo (string, "empty" if no file uploaded)
     );
 
@@ -171,6 +182,7 @@ function main() {
     generate_QR_code();
     upload_cover_photo();
     save_album_to_database();
+    setMessage("success", "Album created successfully.");
 }
 
 main();
@@ -179,8 +191,6 @@ echo json_encode([
     "message" => $message,
     "messageType" => $messageType,
     "album_path" => $album_path,
-    "album_qrcode_path" => $album_qrcode_path,
-    "album_images_path" => $album_images_path,
     "album_cover_img_path" => $album_cover_img_path
 ]);
 exit(0);

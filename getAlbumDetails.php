@@ -20,6 +20,7 @@ $current_album_num = $_POST["current_album_num"];
 $album_cover_img_path = "";
 $album_name = "";
 $date_created = "";
+$album_welcome_text = "";
 $album_description = "";
 $album_folder_path = "";
 
@@ -36,12 +37,12 @@ function get_album_details() {
     global $conn;
     global $user_id;
     global $current_album_num;
-    global $album_cover_img_path, $album_name, $date_created, $album_description, $album_folder_path;
+    global $album_cover_img_path, $album_name, $date_created, $album_description, $album_folder_path, $album_welcome_text;
 
     //Reserved keyword stuffs
     $description_word = "description";
 
-    $sql = "SELECT album_name, date_created, $description_word, album_cover_img_path, album_filepath 
+    $sql = "SELECT album_name, date_created, welcome_text, $description_word, album_cover_img_path, album_filepath 
             FROM albums 
             WHERE user_id = '$user_id' 
             ORDER BY date_created DESC 
@@ -52,6 +53,7 @@ function get_album_details() {
         $row = $result->fetch_assoc();
         $album_name = $row["album_name"];
         $date_created = $row["date_created"];
+        $album_welcome_text = $row["welcome_text"];
         $album_description = $row["description"];
         $album_cover_img_path = $row["album_cover_img_path"];
         $album_folder_path = $row["album_filepath"];
@@ -74,6 +76,7 @@ echo json_encode([
     "albumCoverImagePath" => $album_cover_img_path,
     "albumName" => $album_name,
     "dateCreated" => $date_created,
+    "welcomeText" => $album_welcome_text,
     "albumDescription" => $album_description,
     "albumFolderPath" => $album_folder_path
 ]);
