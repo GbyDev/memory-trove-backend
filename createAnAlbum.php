@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 // === GET TEXT FIELDS FROM $_POST === //
 $user_id = $_POST["user_id"];
-$album_name = strtolower(trim($_POST["album_name"]));
+$album_name = trim($_POST["album_name"]);
 $url = $_POST["url"];
 $album_desc = $_POST["album_desc"];
 
