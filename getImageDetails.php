@@ -48,8 +48,16 @@ function get_image_details() {
         $image_id = $row["img_id"];
         $file_path = $row["file_path"];
         $uploaded_at = $row["uploaded_at"];
-        $full_image_url = $album_folder_path . '/' . $file_path;
-    } else {
+
+        //Clutch fix HAAHAH
+        if (str_starts_with($file_path, 'C:/')) {
+            $full_image_url = $file_path;
+        } 
+        else {
+            $full_image_url = $album_folder_path . '/' . $file_path;
+        }
+    } 
+    else {
         setMessage("error", "No image found at that index.");
     }
 }
