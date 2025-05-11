@@ -10,15 +10,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-// Get the Variables
-$user_id = $_POST["user_id"];
-$album_id = $_POST["album_id"];
-$old_album_name = $_POST["old_album_name"];
-$new_album_name = $_POST["new_album_name"];
-$welcome_text = $_POST["welcome_text"];
-$album_desc = $_POST["album_desc"];
-$qr_code_url = $_POST["url"];
-$cover_photo = $_FILES["cover_photo"];
+//DEBUG: Save all incoming POST and FILE data to disk for inspection
+file_put_contents("debug_post.txt", print_r($_POST, true));
+file_put_contents("debug_files.txt", print_r($_FILES, true));
+
+
+$user_id = $_POST["user_id"] ?? null;
+$album_id = $_POST["album_id"] ?? null;
+$old_album_name = $_POST["old_album_name"] ?? null;
+$new_album_name = $_POST["new_album_name"] ?? null;
+$welcome_text = $_POST["welcome_text"] ?? null;
+$album_desc = $_POST["album_desc"] ?? null;
+$qr_code_url = $_POST["url"] ?? null;
+$cover_photo = $_FILES["cover_photo"] ?? null;
 
 // Folder Paths
 $old_folder_path = "C:/xampp/htdocs/memory-trove-backend/albums/$user_id/$old_album_name";
@@ -59,7 +63,6 @@ function create_new_qr_code() {
         unlink($qr_code_path);
     }
 
-    // Create the new one
     include_once('./phpqrcode/qrlib.php');
     $dir = dirname($qr_code_path);
     if (!is_dir($dir)) {
@@ -71,36 +74,28 @@ function create_new_qr_code() {
 
 // Function to delete a directory and its contents recursively
 function delete_directory($dirPath) {
-    // Check if the directory exists
     if (!is_dir($dirPath)) return;
-
-    // Get all the files and subdirectories inside the directory
     $files = array_diff(scandir($dirPath), array('.', '..'));
-
-    // Loop through all files/subdirectories and delete them
     foreach ($files as $file) {
         $filePath = $dirPath . DIRECTORY_SEPARATOR . $file;
         if (is_dir($filePath)) {
-            delete_directory($filePath); // Recursively delete subdirectories
+            delete_directory($filePath);
         } else {
-            unlink($filePath); // Delete files
+            unlink($filePath);
         }
     }
-
-    // Once the directory is empty, delete it
     rmdir($dirPath);
 }
 
 // Replace the cover photo
 function replace_cover_photo() {
-    global $new_folder_path, $cover_photo;
+    global $new_folder_path, $cover_photo, $cover_folder;
 
     // Define the cover folder path
     $cover_folder = $new_folder_path . "/cover";
 
     // Check if the cover folder exists and delete it entirely
     if (is_dir($cover_folder)) {
-        // Recursively delete the folder and all its contents
         delete_directory($cover_folder);
     }
 
@@ -109,25 +104,30 @@ function replace_cover_photo() {
         output_out_message("Failed to create cover folder.", "error");
     }
 
-    // Check if a new file was uploaded
-    if (!isset($cover_photo) || $cover_photo['error'] !== UPLOAD_ERR_OK) {
-        output_out_message("No valid cover photo uploaded or an error occurred.", "error");
+    // Check for valid upload
+    if (!isset($cover_photo)) {
+        output_out_message("Cover photo is missing from form submission.", "error");
     }
 
-    // Get file information and extension
+    if (!isset($cover_photo['error'])) {
+        output_out_message("Cover photo does not have an error code.", "error");
+    }
+
+    if ($cover_photo['error'] !== UPLOAD_ERR_OK) {
+        output_out_message("Upload error code: " . $cover_photo['error'], "error");
+    }
+
+    // Get file extension
     $originalName = basename($cover_photo['name']);
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-    // Validate the file extension (only allow certain file types)
     $allowed_extensions = ['jpg', 'jpeg', 'png'];
     if (!in_array($extension, $allowed_extensions)) {
         output_out_message("Invalid file type. Only JPG, JPEG, and PNG files are allowed.", "error");
     }
 
-    // Save with standard name and detected extension (always "cover_photo.*")
     $targetFile = $cover_folder . "/cover_photo." . $extension;
 
-    // Move the uploaded file to the target location
     if (!move_uploaded_file($cover_photo['tmp_name'], $targetFile)) {
         output_out_message("Failed to save the new cover photo.", "error");
     }
@@ -136,11 +136,51 @@ function replace_cover_photo() {
     output_out_message("Cover photo replaced successfully.", "success");
 }
 
+function update_album_in_database() {
+    global $conn;
+    global $user_id, $new_album_name, $welcome_text, $album_desc, $new_folder_path, $cover_folder, $album_id;
 
-// Call the functions in order
+    $sql = "UPDATE albums SET 
+        album_name = ?, 
+        welcome_text = ?, 
+        description = ?, 
+        album_filepath = ?, 
+        album_cover_img_path = ? 
+        WHERE user_id = ? AND album_id = ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sssssii", 
+        $new_album_name, 
+        $welcome_text, 
+        $album_desc,  
+        $new_folder_path,
+        $cover_folder,
+        $user_id,
+        $album_id
+    );
+    $stmt->execute();
+}
+
+// MAIN EXECUTION
 change_folder_name();
 create_new_qr_code();
-replace_cover_photo();
 
-output_out_message("Album updated successfully", "success");
+if (isset($cover_photo)) {
+    replace_cover_photo();
+}
+
+update_album_in_database();
+
+echo json_encode([
+    "message" => "Album updated successfully.",
+    "messageType" => "success",
+    "albumId" => $album_id,
+    "albumName" => $new_album_name,
+    "albumFolderPath" => $new_folder_path,
+    "albumWelcomeText" => $welcome_text,
+    "albumDescription" => $album_desc,
+    "albumCoverImagePath" => isset($cover_folder) ? $cover_folder : "unchanged"
+]);
+exit(0);
+
 ?>
