@@ -49,16 +49,17 @@ function areFilesReceived($user_id, $received_files, $album_folder_path, $album_
     return true;
 }
 
-function storeValuesInDb($file_path, $album_id) {
+function storeValuesInDb($file_name, $album_id) {
     global $conn;
-    $query = "INSERT INTO images (album_id, file_path, uploaded_at) VALUES (?, ?, CURDATE())";
+    $img_path = "images/".$file_name;
+    $query = "INSERT INTO images (album_id, file_name, uploaded_at) VALUES (?, ?, CURDATE())";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("is", $album_id, $file_path);
+    $stmt->bind_param("is", $album_id, $img_path);
     $stmt->execute();
     $stmt->close();
 }
 
-function uploadFiles($received_files, $images_folder_path, $album_id){
+function uploadFiles($received_files, $images_folder_path, $album_id) {
     $uploaded_files = [];
 
     // Ensure the image directory exists, create if necessary
@@ -74,16 +75,19 @@ function uploadFiles($received_files, $images_folder_path, $album_id){
         $file_error = $received_files['error'][$index];
 
         if ($file_error === UPLOAD_ERR_OK) {
-            $new_file_name = uniqid() . "_" . basename($file_name);
+            // Use pathinfo() to get file name and extension
+            $file_info = pathinfo($file_name);
+            $file_extension = $file_info['extension'];
+            $new_file_name = uniqid() . '.' . $file_extension;  // Generate a unique filename, keeping the extension
+
             $file_path = $images_folder_path . $new_file_name;  // Use dynamic folder path
 
             // Move the file to the target directory
             if (move_uploaded_file($file_tmp, $file_path)) {
                 // Store the file path in the database
-                storeValuesInDb($file_path, $album_id);
+                storeValuesInDb($new_file_name, $album_id);
                 $uploaded_files[] = $file_path;
-            } 
-            else {
+            } else {
                 setMessage("error", "Failed to move uploaded file.");
                 return false;
             }
@@ -92,7 +96,7 @@ function uploadFiles($received_files, $images_folder_path, $album_id){
     return $uploaded_files;
 }
 
-function main(){
+function main() {
     global $user_id, $album_id, $album_folder_path, $received_files, $images_folder_path;
     // function calls only here
     if (!areFilesReceived($user_id, $received_files, $album_folder_path, $album_id)) return;

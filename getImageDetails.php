@@ -17,7 +17,7 @@ $current_image_num = $_POST["current_image_num"];
 
 // Output Variables
 $image_id = "";
-$file_path = "";
+$file_name = "";
 $full_image_url = "";
 $uploaded_at = "";
 
@@ -33,9 +33,9 @@ function setMessage($msgType, $msg) {
 function get_image_details() {
     global $conn;
     global $album_id, $album_folder_path, $current_image_num;
-    global $image_id, $file_path, $uploaded_at, $full_image_url;
+    global $image_id, $file_name, $uploaded_at, $full_image_url;
 
-    $sql = "SELECT img_id, file_path, uploaded_at 
+    $sql = "SELECT img_id, file_name, uploaded_at 
             FROM images 
             WHERE album_id = '$album_id' 
             ORDER BY uploaded_at ASC 
@@ -46,16 +46,11 @@ function get_image_details() {
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
         $image_id = $row["img_id"];
-        $file_path = $row["file_path"];
+        $file_name = $row["file_name"];
         $uploaded_at = $row["uploaded_at"];
 
-        //Clutch fix HAAHAH
-        if (str_starts_with($file_path, 'C:/')) {
-            $full_image_url = $file_path;
-        } 
-        else {
-            $full_image_url = $album_folder_path . '/' . $file_path;
-        }
+        $relativePath = str_replace("C:/xampp/htdocs", "", $album_folder_path);
+        $full_image_url = "http://localhost" . $relativePath . '/' . $file_name;
     } 
     else {
         setMessage("error", "No image found at that index.");
@@ -73,7 +68,7 @@ echo json_encode([
     "message" => $message,
     "messageType" => $messageType,
     "imageId" => $image_id,
-    "filePath" => $file_path,
+    "fileName" => $file_name,
     "image_url" => $full_image_url,
     "uploadedAt" => $uploaded_at
 ]);
