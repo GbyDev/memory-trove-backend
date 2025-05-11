@@ -11,9 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 //DEBUG: Save all incoming POST and FILE data to disk for inspection
-file_put_contents("debug_post.txt", print_r($_POST, true));
-file_put_contents("debug_files.txt", print_r($_FILES, true));
-
+//file_put_contents("debug_post.txt", print_r($_POST, true));
+//file_put_contents("debug_files.txt", print_r($_FILES, true));
 
 $user_id = $_POST["user_id"] ?? null;
 $album_id = $_POST["album_id"] ?? null;
@@ -24,9 +23,14 @@ $album_desc = $_POST["album_desc"] ?? null;
 $qr_code_url = $_POST["url"] ?? null;
 $cover_photo = $_FILES["cover_photo"] ?? null;
 
+//The backend can take care of date. Date created will always be constant
+$date_created = "";
+
 // Folder Paths
 $old_folder_path = "C:/xampp/htdocs/memory-trove-backend/albums/$user_id/$old_album_name";
 $new_folder_path = "C:/xampp/htdocs/memory-trove-backend/albums/$user_id/$new_album_name";
+$cover_photo_filename = "";
+
 
 // Output message function
 function output_out_message($message, $message_type) {
@@ -87,9 +91,8 @@ function delete_directory($dirPath) {
     rmdir($dirPath);
 }
 
-// Replace the cover photo
 function replace_cover_photo() {
-    global $new_folder_path, $cover_photo, $cover_folder;
+    global $new_folder_path, $cover_photo, $cover_folder, $cover_photo_filename;
 
     // Define the cover folder path
     $cover_folder = $new_folder_path . "/cover";
@@ -126,19 +129,21 @@ function replace_cover_photo() {
         output_out_message("Invalid file type. Only JPG, JPEG, and PNG files are allowed.", "error");
     }
 
-    $targetFile = $cover_folder . "/cover_photo." . $extension;
+    // Assign filename and save
+    $cover_photo_filename = "cover_photo." . $extension;
+    $targetFile = $cover_folder . "/" . $cover_photo_filename;
 
     if (!move_uploaded_file($cover_photo['tmp_name'], $targetFile)) {
         output_out_message("Failed to save the new cover photo.", "error");
     }
-
-    // Success message
-    output_out_message("Cover photo replaced successfully.", "success");
 }
+
 
 function update_album_in_database() {
     global $conn;
-    global $user_id, $new_album_name, $welcome_text, $album_desc, $new_folder_path, $cover_folder, $album_id;
+    global $user_id, $new_album_name, $welcome_text, $album_desc, $new_folder_path, $cover_folder, $cover_photo_filename, $album_id;
+
+    $cover_full_path = $cover_folder . "/" . $cover_photo_filename;
 
     $sql = "UPDATE albums SET 
         album_name = ?, 
@@ -154,16 +159,29 @@ function update_album_in_database() {
         $welcome_text, 
         $album_desc,  
         $new_folder_path,
-        $cover_folder,
+        $cover_full_path,
         $user_id,
         $album_id
     );
     $stmt->execute();
 }
 
+//Only for the sole purpose of completing the return statement and satisfy the goshdarned AlbumContext
+function get_album_creation_date(){
+    global $conn, $album_id, $date_created;
+    $sql = "SELECT date_created from albums WHERE album_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $album_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $date_created = $row["date_created"];
+}
+
 // MAIN EXECUTION
 change_folder_name();
 create_new_qr_code();
+get_album_creation_date();
 
 if (isset($cover_photo)) {
     replace_cover_photo();
@@ -179,7 +197,8 @@ echo json_encode([
     "albumFolderPath" => $new_folder_path,
     "albumWelcomeText" => $welcome_text,
     "albumDescription" => $album_desc,
-    "albumCoverImagePath" => isset($cover_folder) ? $cover_folder : "unchanged"
+    "albumCoverImagePath" => $new_folder_path . "/cover/" . $cover_photo_filename,  // Fixed the path here
+    "dateCreated" => $date_created,
 ]);
 exit(0);
 
