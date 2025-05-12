@@ -17,7 +17,6 @@ $data = json_decode(file_get_contents("php://input"), true);
 $album_id = $data['album_id'];
 $album_folder_path = $data['album_folder_path'];
 $selected_images = $data['selected_images']; 
-$num_of_images = count($selected_images);
 
 $message = "";
 $messageType = "";
