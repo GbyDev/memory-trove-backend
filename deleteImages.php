@@ -60,19 +60,49 @@ function delete_images_from_folder($all_filepaths) {
     }
 }
 
-function delete_images_from_database(){
+function delete_images_from_database($all_filenames){
     global $conn, $album_id, $num_of_images;
-    $sql = "DELETE FROM images WHERE album_id = ? LIMIT ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ii", $album_id, $num_of_images);
-    $stmt->execute();
-    $stmt->close();
+    
+    if (count($all_filenames) == 0) {
+        setMessage("error", "No files selected");
+        return;
+    }
+    foreach ($all_filenames as $filename) {
+        $sql = "DELETE FROM images WHERE album_id=$album_id AND file_name='$filename'";
+        $conn->query($sql);
+    }
+}
+
+function test_query($all_filenames) {
+    global $conn;
+
+    if (!is_array($all_filenames)) {
+        $all_filenames = explode(",", $all_filenames);  // Split string into array
+    }
+
+    foreach ($all_filenames as $filename) {
+        $sql = "SELECT * FROM images WHERE file_name='$filename'";
+        $conn->query($sql);
+    }
+
+    if ($conn->affected_rows > 0) {
+        return "Success";
+    } 
+    else {
+        return "Failed";
+    }
 }
 
 
+//Delete images from folder first
 $all_filepaths = concatenate_all_filepaths();
+//delete_images_from_folder($all_filepaths);
+
+//Then, delete images from database
 $all_filenames = concatenate_all_filenames();
-setMessage("black", "$all_filenames");
+//delete_images_from_database($all_filenames);
+$test_response = test_query($all_filenames);
+setMessage("black", "$test_response");
 
 exit(json_encode([
     "message" => $message,
