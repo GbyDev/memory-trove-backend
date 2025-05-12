@@ -1,5 +1,5 @@
 <?php
-include('db.php');
+include('db.php'); // Include your database connection file
 
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
@@ -7,80 +7,75 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    exit(0);
+    exit(0); // Exit early for OPTIONS requests (CORS preflight)
 }
 
-// Fetch the incoming JSON data
-$data = json_decode(file_get_contents('php://input'), true);
+// Read the raw POST data
+$data = json_decode(file_get_contents("php://input"), true);
 
-// Log the incoming data for debugging
-error_log(print_r($data, true));
-
-// Validate incoming data
-if (!isset($data['album_id']) || !isset($data['album_folder_path']) || !isset($data['selected_images'])) {
-    echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
-    exit();
-}
-
+// Isolate the individual values
 $album_id = $data['album_id'];
 $album_folder_path = $data['album_folder_path'];
-$selected_images = json_decode($data['selected_images'], true);
+$selected_images = $data['selected_images']; 
+$num_of_images = count($selected_images);
 
-// Validate selected images
-if (!is_array($selected_images) || empty($selected_images)) {
-    echo json_encode(['success' => false, 'message' => 'No images selected for deletion']);
-    exit();
+$message = "";
+$messageType = "";
+
+function setMessage($msgType, $msg) {
+    global $messageType, $message;
+    $messageType = $msgType;
+    $message = $msg;
 }
 
-// Function to delete images from the database
-function delete_images_from_database($album_id, $selected_images) {
-    global $conn;
+//For testing
+//Adding the "/images/" between the album's folder path and the image's file name
+function concatenate_all_filepaths() {
+    global $selected_images, $album_folder_path;
+    $all_filepaths = [];
+    foreach ($selected_images as $filename) {
+        $all_filepaths[] = $album_folder_path . "/images/" . $filename;
+    }
+    return $all_filepaths; 
+}
 
-    // Prepare placeholders for the SQL query
-    $placeholders = implode(',', array_fill(0, count($selected_images), '?'));
+//The images are stored like this: /images/filename
+//so just add the "images/"
+function concatenate_all_filenames() {
+    global $selected_images;
+    $all_filenames = [];
+    foreach ($selected_images as $filename) {
+        $all_filenames[] = "images/" . $filename;
+    }
+    return implode(",", $all_filenames);
+}
 
-    // SQL query to delete images from the database
-    $sql = "DELETE FROM images WHERE album_id = ? AND file_name IN ($placeholders)";
+function delete_images_from_folder($all_filepaths) {
+    if (count($all_filepaths) == 0) {
+        setMessage("error", "No files selected");
+        return;
+    }
+    foreach ($all_filepaths as $filepath) {
+        unlink($filepath);
+    }
+}
+
+function delete_images_from_database(){
+    global $conn, $album_id, $num_of_images;
+    $sql = "DELETE FROM images WHERE album_id = ? LIMIT ?";
     $stmt = $conn->prepare($sql);
-
-    // Bind parameters dynamically
-    $types = str_repeat('s', count($selected_images)) . 'i'; // 's' for string, 'i' for integer
-    $params = array_merge($selected_images, [$album_id]);
-    $stmt->bind_param($types, ...$params);
-
-    // Execute the query
-    if ($stmt->execute()) {
-        return true;
-    } else {
-        error_log("Error deleting images from database: " . $stmt->error);
-        return false;
-    }
+    $stmt->bind_param("ii", $album_id, $num_of_images);
+    $stmt->execute();
+    $stmt->close();
 }
 
-// Function to delete image files from the folder
-function delete_image_files($album_folder_path, $selected_images) {
-    foreach ($selected_images as $image) {
-        $image_path = $album_folder_path . '/' . $image;
-        if (file_exists($image_path)) {
-            unlink($image_path); // Delete the file
-        } else {
-            error_log("File not found: $image_path");
-        }
-    }
-}
 
-// Delete images from the database
-if (!delete_images_from_database($album_id, $selected_images)) {
-    echo json_encode(['success' => false, 'message' => 'Failed to delete images from database']);
-    exit();
-}
+$all_filepaths = concatenate_all_filepaths();
+$all_filenames = concatenate_all_filenames();
+setMessage("black", "$all_filenames");
 
-// Delete image files from the folder
-delete_image_files($album_folder_path, $selected_images);
-
-// Return success response
-echo json_encode([
-    'success' => true,
-    'message' => 'Successfully deleted selected images.',
-]);
+exit(json_encode([
+    "message" => $message,
+    "messageType" => $messageType,
+]));
 ?>
