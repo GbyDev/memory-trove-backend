@@ -44,7 +44,7 @@ function getEmail(){
 getEmail();
 
 echo json_encode([
-    'email' => $email,
+    'newEmail' => $email,
 ]);
 exit;
 ?>
