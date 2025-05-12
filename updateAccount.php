@@ -30,67 +30,52 @@ function setMessage($msgType, $msg){
 }
 
 function check_if_data_is_received() {
-    global $data, $username, $email, $password;
+    global $data, $username, $email, $password, $user_id;
 
-    if (!isset($data['username']) || !isset($data['email']) || !isset($data['password']) || !isset($data['userId'])) {
+    if (!isset($data['username']) || !isset($data['email']) || !isset($data['password']) || !isset($data['user_id'])) {
         setMessage("error", "Username, email, and password are required.");
     } 
     //If valid, store the data
     $username = $data['username'];
     $email = $data['email'];
     $password = $data['password'];
+    $user_id = $data['user_id'];
     setMessage("success", "Username is $username, email is $email, and password is $password.");
 }
 
 
-function user_already_exists() {
-    global $conn, $username, $email;
+function input_is_taken() {
+    global $conn, $user_id, $email, $username;
 
-    $numOfInvalidFields = 0;
-    $usernameMessage = "";
-    $emailMessage = "";
-    $andText = "";
-    $msgType = "";
-    $description = "";
-    $fullMessage = "$usernameMessage $andText $emailMessage $description";
-
-    //Check if the username is already taken
-    $sql = "SELECT * FROM users WHERE username='$username'";
+    $sql = "SELECT username FROM users WHERE user_id = '$user_id'";
     $result = $conn->query($sql);
     
-    if ($result->num_rows > 0) {
-        $usernameMessage = "Username";
-        $description = "already exists.";
-        $numOfInvalidFields++;
-    } 
-    //Check if the email is already taken
-    $sql = "SELECT * FROM users WHERE email='$email'";
-    $result = $conn->query($sql);
-    
-    if ($result->num_rows > 0) {
-        $emailMessage = "Email";
-        $description = "already exists.";
-        $numOfInvalidFields++;
-    } 
+    $old_username = $result->fetch_assoc()['username'];
 
-    switch ($numOfInvalidFields) {
-        case 0:
-            $fullMessage = "Username and email are available.";
-            $msgType = "success";
-            setMessage($msgType, $fullMessage);
-            return false;
-        case 1:
-            $fullMessage = "$usernameMessage $andText $emailMessage $description";
-            $msgType = "error";
-            setMessage($msgType, $fullMessage);
-            return true;
-        case 2:
-            $andText = "and";
-            $fullMessage = "$usernameMessage $andText $emailMessage $description";
-            $msgType = "error";
-            setMessage($msgType, $fullMessage);
-            return true;
+    $sql = "SELECT * FROM users WHERE username = '$username' AND username != '$old_username'";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+        // Username is already taken by someone else
+        setMessage("error", "Username is already taken by someone else.");
+        return true;
     }
+
+    $sql = "SELECT email FROM users WHERE user_id = '$user_id'";
+    $result = $conn->query($sql);
+    
+    $old_email = $result->fetch_assoc()['email'];
+
+    $sql - "SELECT * FROM users WHERE email = '$email' AND email != '$old_email'";
+
+    $result = $conn->query($sql);
+    
+    if ($result->num_rows > 0) {
+        // Email is already taken by someone else
+        setMessage("error", "Email is already taken by someone else.");
+        return true;
+    }
+    return false;
 }
 
 function storeValuesInDB() {
@@ -104,13 +89,18 @@ function storeValuesInDB() {
             WHERE user_id = '$user_id'";
 
     if ($conn->query($sql) === TRUE) {
-        setMessage("success", "User registered successfully. Redirecting to login page...");
+        setMessage("success", "User details changed successfully.");
     } 
     else {
         setMessage("error", "Error: " . $conn->error);
     }
 }
 
+function main() {
+    check_if_data_is_received();
+    storeValuesInDB();
+}
+main();
 echo json_encode([
     'messageType' => $messageType,
     'message' => $message,
