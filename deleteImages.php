@@ -47,7 +47,7 @@ function concatenate_all_filenames() {
     foreach ($selected_images as $filename) {
         $all_filenames[] = "images/" . $filename;
     }
-    return implode(",", $all_filenames);
+    return $all_filenames;
 }
 
 function delete_images_from_folder($all_filepaths) {
@@ -61,15 +61,21 @@ function delete_images_from_folder($all_filepaths) {
 }
 
 function delete_images_from_database($all_filenames){
-    global $conn, $album_id, $num_of_images;
+    global $conn;
     
     if (count($all_filenames) == 0) {
         setMessage("error", "No files selected");
         return;
     }
     foreach ($all_filenames as $filename) {
-        $sql = "DELETE FROM images WHERE album_id=$album_id AND file_name='$filename'";
+        $sql = "DELETE FROM images WHERE file_name='$filename'";
         $conn->query($sql);
+    }
+    if ($conn->affected_rows > 0) {
+        setMessage("success", "Images deleted successfully");
+    } 
+    else {
+        setMessage("error", "Failed to delete images");
     }
 }
 
@@ -96,13 +102,13 @@ function test_query($all_filenames) {
 
 //Delete images from folder first
 $all_filepaths = concatenate_all_filepaths();
-//delete_images_from_folder($all_filepaths);
+delete_images_from_folder($all_filepaths);
 
 //Then, delete images from database
 $all_filenames = concatenate_all_filenames();
-//delete_images_from_database($all_filenames);
-$test_response = test_query($all_filenames);
-setMessage("black", "$test_response");
+delete_images_from_database($all_filenames);
+//$test_response = test_query($all_filenames);
+//setMessage("black", "$test_response");
 
 exit(json_encode([
     "message" => $message,
