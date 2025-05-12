@@ -1,4 +1,8 @@
 **/qrcode.png
 **/cover_photo.png
-*.jpg
 *.png
+*.jpg
+
+# Unignore the specific jpg file you want to keep
+!defaults/
+!defaults/cover_image.jpg
