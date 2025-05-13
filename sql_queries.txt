@@ -20,7 +20,6 @@ CREATE TABLE albums (
     description TEXT,
     album_filepath VARCHAR(500),
     album_cover_img_path VARCHAR(500),
-    foreign key (user_id) references users(user_id)
 );
 
 CREATE TABLE images (
